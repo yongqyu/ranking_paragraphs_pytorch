@@ -1,6 +1,7 @@
 # Ranking Paragraphs
 
-Ranking Paragraphs for Improving Answer Recall in Open-Domain Question Answering. Lee et al., EMNLP 2018 [arxiv](https://arxiv.org/pdf/1810.00494.pdf)  
+Ranking Paragraphs for Improving Answer Recall in Open-Domain Question Answering.   
+Lee et al., EMNLP 2018 [arxiv](https://arxiv.org/pdf/1810.00494.pdf)  
 
 
 Preprocessing by ```Preprocess.ipynb``` is necessary.
@@ -13,5 +14,7 @@ Preprocessing by ```Preprocess.ipynb``` is necessary.
 
 ## Example to run:
 ```
-python train.py
+python main.py
 ```
+
+Work In Progress

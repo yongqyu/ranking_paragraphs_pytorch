@@ -23,7 +23,7 @@ test_loader = get_loader(args.data_path, args.test_path, args.batch_size, args.d
 
 # Creating the architecture of the Neural Network
 model = ParRanker(args.data_path, args.word_list_path, args.glove_path,
-                  args.word_dim, args.hidden_dim)
+                  args.word_dim, args.hidden_dim, args.dropout)
 if torch.cuda.is_available():
     model.cuda()
 
@@ -34,8 +34,8 @@ for p in model.parameters():
 print(model)
 print("The number of parameters: {}".format(num_params))
 
-criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+criterion = nn.BCEWithLogitsLoss() # combines a Sigmoid
+optimizer = optim.Adamax(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
 best_epoch = 0
 best_loss  = 9999.
@@ -56,11 +56,10 @@ def train():
             y = Variable(torch.stack(y, 1)).to(device)
             len_x = Variable(len_x).to(device)
             len_y = Variable(len_y).to(device)
-            l = Variable(l).to(device)
+            l = Variable(l).to(device).float()
 
             logit = model(x,y,len_x,len_y)
-            loss = criterion(pred, torch.ones(pred.size(0)).to(device)) \
-                 + criterion(neg_pred, torch.zeros(neg_pred.size(0)).to(device))
+            loss = criterion(logit, l)
             train_loss += loss.item()
 
             model.zero_grad()
@@ -74,24 +73,18 @@ def train():
             val_loss = 0
             val_hits = 0
             with torch.no_grad():
-                for s, (x, n) in enumerate(val_loader):
-                    x = x.long().to(device)
-                    n = n.long().to(device)
-                    u = Variable(x[:,0])
-                    v = Variable(x[:,1])
-                    #r = Variable(x[:,2]).float()
+                for s, (x,len_x,y,len_y,l) in enumerate(val_loader):
+                    x = Variable(torch.stack(x, 1)).to(device)
+                    y = Variable(torch.stack(y, 1)).to(device)
+                    len_x = Variable(len_x).to(device)
+                    len_y = Variable(len_y).to(device)
+                    l = Variable(l).to(device).float()
 
-                    pred, neg_pred = model(u, v, n)
-                    loss = criterion(pred, torch.ones(pred.size(0)).to(device)) \
-                         + criterion(neg_pred, torch.zeros(neg_pred.size(0)).to(device))
+                    logit = model(x,y,len_x,len_y)
+                    loss = criterion(logit, l)
                     val_loss += loss.item()
 
-                    # Hit Ratio
-                    pred = torch.cat((pred.unsqueeze(1), neg_pred.view(-1, args.neg_cnt)), 1)
-                    _, topk = torch.sort(pred, 1, descending=True)
-                    val_hits += sum([0 in topk[k, :args.at_k] for k in range(topk.size(0))])
-
-            print('[val loss] : '+str(val_loss/s)+' [val hit ratio] : '+str(val_hits/num_users))
+            print('[val loss] : '+str(val_loss/s))
             if best_loss > (val_loss/s):
                 best_loss = (val_loss/s)
                 best_epoch= epoch+1
@@ -107,24 +100,18 @@ def test():
     test_loss = 0
     test_hits = 0
     with torch.no_grad():
-        for s, (x, n) in enumerate(test_loader):
-            x = x.long().to(device)
-            n = n.long().to(device)
-            u = Variable(x[:,0])
-            v = Variable(x[:,1])
-            #r = Variable(x[:,2]).float()
+        for s, (x,len_x,y,len_y,l) in enumerate(test_loader):
+                x = Variable(torch.stack(x, 1)).to(device)
+                y = Variable(torch.stack(y, 1)).to(device)
+                len_x = Variable(len_x).to(device)
+                len_y = Variable(len_y).to(device)
+                l = Variable(l).to(device).float()
 
-            pred, neg_pred = model(u, v, n)
-            loss = criterion(pred, torch.ones(pred.size(0)).to(device)) \
-                 + criterion(neg_pred, torch.zeros(neg_pred.size(0)).to(device))
-            test_loss += loss.item()
+                logit = model(x,y,len_x,len_y)
+                loss = criterion(logit, l)
+                val_loss += loss.item()
 
-            # Hit Ratio
-            pred = torch.cat((pred.unsqueeze(1), neg_pred.view(-1, args.neg_cnt)), 1)
-            _, topk = torch.sort(pred, 1, descending=True)
-            test_hits += sum([0 in topk[k, :args.at_k] for k in range(topk.size(0))])
-
-    print('[test loss] : '+str(test_loss/s)+' [test hit ratio] : '+str(test_hits/num_users))
+    print('[test loss] : '+str(test_loss/s))
 
 
 if __name__ == '__main__':
