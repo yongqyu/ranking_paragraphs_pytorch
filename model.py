@@ -20,26 +20,25 @@ class ParRanker(nn.Module):
     def desc_sort(self, x, len):
         len_sort, ind = torch.sort(len, 0, descending=True)
         x_sort = x[ind]
-        return x_sort, len_sort, ind
+        _, unsort_ind = torch.sort(ind, 0)
+        return x_sort, len_sort, ind, unsort_ind
 
     def forward(self, x, y, len_x, len_y):
         x = self.w_emb(x)
         y = self.w_emb(y)
-        x_sort, len_x_sort, ind_x = self.desc_sort(x, len_x)
-        y_sort, len_y_sort, ind_y = self.desc_sort(y, len_y)
+        x_sort, len_x_sort, ind_x, unsort_ind_x = self.desc_sort(x, len_x)
+        y_sort, len_y_sort, ind_y, unsort_ind_y = self.desc_sort(y, len_y)
         x_pack = pack_padded_sequence(x_sort, len_x_sort, batch_first=True)
         y_pack = pack_padded_sequence(y_sort, len_y_sort, batch_first=True)
 
         x,_ = self.bilstm(x_pack)
         x,_ = pad_packed_sequence(x, batch_first=True)
         x = torch.cat((torch.stack([x[i,len_x_sort[i]-1,:self.hidden_dim] for i in range(x.size(0))]),
-                      x[:,0,self.hidden_dim:]), 1)
-        x = x.scatter_(0,ind_x.repeat(x.size(1),1).t(),x)
+                      x[:,0,self.hidden_dim:]), 1)[unsort_ind_x]
 
         y,_ = self.bilstm(y_pack)
         y,_ = pad_packed_sequence(y, batch_first=True)
         y = torch.cat((torch.stack([y[i,len_y_sort[i]-1,:self.hidden_dim] for i in range(y.size(0))]),
-                      y[:,0,self.hidden_dim:]), 1)
-        y = x.scatter_(0,ind_y.repeat(y.size(1),1).t(),y)
+                      y[:,0,self.hidden_dim:]), 1)[unsort_ind_y]
 
         return torch.sum(torch.mul(x,y), 1)
