@@ -1,10 +1,10 @@
 # Ranking Paragraphs
 
 Ranking Paragraphs for Improving Answer Recall in Open-Domain Question Answering.   
-Lee et al., EMNLP 2018 [arxiv](https://arxiv.org/pdf/1810.00494.pdf)  
+Lee et al., EMNLP 2018 [[arxiv]](https://arxiv.org/pdf/1810.00494.pdf)  
 
 
-Preprocessing by ```Preprocess.ipynb``` is necessary.
+```./data/glove.6B.300d.txt``` is required for preprocessing, and ```Preprocess.ipynb``` should be performed.
 
 ## The requirements are as follows:
 1.python 3.5
@@ -16,5 +16,3 @@ Preprocessing by ```Preprocess.ipynb``` is necessary.
 ```
 python main.py
 ```
-
-Work In Progress

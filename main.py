@@ -12,6 +12,7 @@ from torch.autograd import Variable
 from data_loader import get_loader
 from model import ParRanker
 from config import get_args
+from utils import accuracy
 args = get_args()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -44,12 +45,12 @@ best_loss  = 9999.
 def train():
     global best_loss, best_epoch
     if args.start_epoch:
-        model.load_state_dict(torch.load(os.path.join(args.model_path+args.model,
+        model.load_state_dict(torch.load(os.path.join(args.model_path,
                               'model-%d.pkl'%(args.start_epoch))).state_dict())
 
     # Training
     for epoch in range(args.start_epoch, args.num_epochs):
-        train_loss = 0
+        train_loss = 0.
         model.train()
         for s, (x,len_x,y,len_y,l) in enumerate(train_loader):
             x = Variable(torch.stack(x, 1)).to(device)
@@ -70,8 +71,8 @@ def train():
         if (epoch+1) % args.val_step == 0:
             # Validation
             model.eval()
-            val_loss = 0
-            val_hits = 0
+            val_loss = 0.
+            val_accs = 0.
             with torch.no_grad():
                 for s, (x,len_x,y,len_y,l) in enumerate(val_loader):
                     x = Variable(torch.stack(x, 1)).to(device)
@@ -81,24 +82,26 @@ def train():
                     l = Variable(l).to(device).float()
 
                     logit = model(x,y,len_x,len_y)
+                    acc  = accuracy(logit.cpu(), l.cpu(), args.threshold)
                     loss = criterion(logit, l)
+                    val_accs += acc
                     val_loss += loss.item()
 
-            print('[val loss] : '+str(val_loss/s))
+            print('[val loss] : '+str(val_loss/s)+'[val accs] : '+str(val_accs/s))
             if best_loss > (val_loss/s):
                 best_loss = (val_loss/s)
                 best_epoch= epoch+1
                 torch.save(model,
-                       os.path.join(args.model_path+args.model,
+                       os.path.join(args.model_path,
                        'model-%d.pkl'%(epoch+1)))
 
 def test():
     # Test
-    model.load_state_dict(torch.load(os.path.join(args.model_path+args.model,
+    model.load_state_dict(torch.load(os.path.join(args.model_path,
                           'model-%d.pkl'%(best_epoch))).state_dict())
     model.eval()
-    test_loss = 0
-    test_hits = 0
+    test_loss = 0.
+    test_accs = 0.
     with torch.no_grad():
         for s, (x,len_x,y,len_y,l) in enumerate(test_loader):
                 x = Variable(torch.stack(x, 1)).to(device)
@@ -108,10 +111,12 @@ def test():
                 l = Variable(l).to(device).float()
 
                 logit = model(x,y,len_x,len_y)
+                acc  = accuracy(logit.cpu(), l.cpu(), args.threshold)
                 loss = criterion(logit, l)
-                val_loss += loss.item()
+                test_accs += acc
+                test_loss += loss.item()
 
-    print('[test loss] : '+str(test_loss/s))
+    print('[test loss] : '+str(test_loss/s)+'[test accs] : '+str(test_accs/s))
 
 
 if __name__ == '__main__':

@@ -9,12 +9,13 @@ def get_args():
     parser.add_argument('--data-shuffle', type=bool, default=True)
     parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--num-epochs', type=int, default=200)
-    parser.add_argument('--word-dim', type=int, default=100)
+    parser.add_argument('--word-dim', type=int, default=300)
     parser.add_argument('--hidden-dim', type=int, default=128)
 
     parser.add_argument('--lr', type=float, default=0.0001)
     parser.add_argument('--weight_decay', type=float, default=0.0)
     parser.add_argument('--dropout', type=float, default=0.4)
+    parser.add_argument('--threshold', type=float, default=0.5)
 
     parser.add_argument('--val-step', type=int, default=5)
     parser.add_argument('--test-epoch', type=int, default=50)
@@ -27,7 +28,7 @@ def get_args():
     parser.add_argument('--glove-path', type=str, default='glove_dict.npy')
     parser.add_argument('--word-dict-path', type=str, default='word_dict.npy')
     parser.add_argument('--word-list-path', type=str, default='word_list.npy')
-    parser.add_argument('--model-path', type=str, default="./model")
+    parser.add_argument('--model-path', type=str, default="./models")
 
     args = parser.parse_args()
 
